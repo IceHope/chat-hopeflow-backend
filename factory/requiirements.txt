@@ -1,0 +1,9 @@
+langchain
+langchain-openai
+langchain-community
+qianfan
+tencentcloud-sdk-python
+websocket-client
+httpx_sse
+
+requests
