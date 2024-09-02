@@ -1,8 +1,11 @@
 import os
 
+from dotenv import load_dotenv
 from langchain_core.language_models import BaseChatModel
 
 from factory.llm.base_lllm_factory import BaseLLMFactory
+
+load_dotenv()
 
 
 def perform_groq():
@@ -11,7 +14,8 @@ def perform_groq():
     # 设置 API 密钥和代理 URL
     client = OpenAI(
         api_key=os.getenv("GROQ_API_KEY"),
-        base_url=os.getenv("GROQ_BASE_URL")
+        # base_url=os.getenv("GROQ_BASE_URL")
+        base_url="https://api.openaiee.com/openai/v1"
     )
 
     # 发送请求
@@ -19,7 +23,7 @@ def perform_groq():
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "What is the capital of France?"}
+            {"role": "user", "content": "你是谁"}
         ]
     )
 

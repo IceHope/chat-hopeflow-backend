@@ -4,8 +4,8 @@ from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import JSONResponse
 import os
 
-from config import PATH_PROJECT_IMAGES
 from controller.utils.tencent_cos import get_tencent_cloud_url
+from path_config import PATH_PROJECT_IMAGES
 from utils.log_utils import LogUtils
 
 # 创建一个文件上传的路由

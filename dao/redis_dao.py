@@ -6,6 +6,7 @@ from datetime import datetime
 import redis
 from pydantic import BaseModel
 
+from config.base_config import BaseConfiguration
 from utils.log_utils import LogUtils
 
 
@@ -17,7 +18,12 @@ class ChatHistoryModel(BaseModel):
 
 class ChatRedisManager:
     def __init__(self, redis_host='localhost', redis_port=6379):
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+        redis_config = BaseConfiguration().get_redis_config()
+        self.redis_client = redis.Redis(
+            host=redis_config["redis_host"],
+            port=redis_config["redis_port"],
+            decode_responses=True
+        )
         self.redis_client.execute_command('SELECT', 2)
 
     def add_chat_record(self, username, sessionid, msg_list):

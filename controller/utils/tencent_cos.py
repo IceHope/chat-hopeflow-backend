@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from qcloud_cos import CosConfig
 from qcloud_cos import CosS3Client
 
-from config import PATH_PROJECT_IMAGES
+from path_config import PATH_PROJECT_IMAGES
 from utils.log_utils import LogUtils
 
 load_dotenv()

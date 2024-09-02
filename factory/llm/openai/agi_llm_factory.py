@@ -31,7 +31,7 @@ def _test_img():
     # image_url = "https://dashscope.oss-cn-beijing.aliyuncs.com/images/dog_and_girl.jpeg"
     # image_url = "https://icehope-1326453681.cos.ap-beijing.myqcloud.com/2024-08-02-23-28-39.png"
     image_url = "https://img1.baidu.com/it/u=1369931113,3388870256&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1703696400&t=f3028c7a1dca43a080aeb8239f09cc2f"
-    llm = AgiLLMFactory().get_llm("claude-3-5-sonnet-20240620")
+    llm = AgiLLMFactory().get_llm("gemini-1.5-flash")
     inputs = [
         {"role": "user",
          "content": [

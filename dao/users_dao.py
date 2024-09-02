@@ -54,7 +54,7 @@ class UserDAO:
             password: str
     ) -> Optional[UserModel]:
         with get_db() as db:
-            user = UserModel(
+            user_model = UserModel(
                 id=str(uuid.uuid4()),
                 name=name,
                 password=password,
@@ -63,11 +63,11 @@ class UserDAO:
                 updated_at=int(time.time()),
             )
 
-            result = User(**user.model_dump())
+            result = User(**user_model.model_dump())
             db.add(result)
             db.commit()
             db.refresh(result)
-            return user
+            return user_model
 
     def get_user_by_name(self, name: str) -> Optional[UserModel]:
         """Get user by username."""

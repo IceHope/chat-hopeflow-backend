@@ -4,7 +4,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from config import PATH_PROJECT_IMAGES
+from path_config import PATH_PROJECT_IMAGES
 
 from factory.llm.base_lllm_factory import BaseLLMFactory
 

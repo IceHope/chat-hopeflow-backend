@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from config import SQLALCHEMY_DATABASE_URL
+from path_config import SQLALCHEMY_DATABASE_URL
 
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
@@ -19,7 +19,6 @@ SessionLocal = sessionmaker(
 Session = scoped_session(SessionLocal)
 
 Base = declarative_base()
-
 
 
 # Dependency

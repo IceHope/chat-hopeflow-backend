@@ -5,35 +5,25 @@ import traceback
 from typing import List
 
 from fastapi import APIRouter
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
 from langfuse.decorators import observe, langfuse_context
 from pydantic import BaseModel
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from controller.question_prompt import QUESTION_PROMPT
+from controller.question_prompt import generate_follow_questions
 from dao.redis_dao import ChatRedisManager
 from factory.llm_factory import LLMFactory
 from factory.mode_type import LLMType
 from schema.chat_schema import ChatRequestData
 from schema.custom_model import get_all_custom_models
-from utils.constants import COMMAND_DONE_FROM_SERVE, COMMAND_STOP_FROM_CLIENT
+from utils.constants import (
+    COMMAND_DONE_FROM_SERVE,
+    COMMAND_STOP_FROM_CLIENT,
+)
 from utils.log_utils import LogUtils
 
 chat_router = APIRouter()
 
 chat_manager = ChatRedisManager()
-
-follow_question_llm = LLMFactory.get_llm(LLMType.ZHIPU, "GLM-4-Flash")
-
-
-def generate_follow_questions(ask, reply):
-    prompt = ChatPromptTemplate.from_template(QUESTION_PROMPT)
-    # 这里可以选择特定的大模型
-    chain = prompt | follow_question_llm | StrOutputParser()
-    follow_questions = chain.invoke({"number": 3, "ask": ask, "ai_answer": reply})
-    LogUtils.log_info(f"follow_questions: {follow_questions}")
-    return follow_questions
 
 
 def generate_image_content(data: str, image_urls: List[str]) -> list:
@@ -42,7 +32,9 @@ def generate_image_content(data: str, image_urls: List[str]) -> list:
     可以看到模型能力的bug
     """
     data_list = [{"type": "text", "text": data}]
-    images_list = [{"type": "image_url", "image_url": {"url": url}} for url in image_urls]
+    images_list = [
+        {"type": "image_url", "image_url": {"url": url}} for url in image_urls
+    ]
     data_list.extend(images_list)
     return data_list
 
@@ -72,13 +64,16 @@ async def send_streaming_data(chat_request_data, websocket, response, llm):
                 "model_name": chat_request_data.model_name,
             }
         ]
-        chat_manager.add_chat_record(chat_request_data.user_name, chat_request_data.session_id, outputs)
-        follow_questions = generate_follow_questions(chat_request_data.data, final_result)
+        chat_manager.add_chat_record(
+            chat_request_data.user_name, chat_request_data.session_id, outputs
+        )
+        follow_questions = generate_follow_questions(
+            chat_request_data.data, final_result
+        )
         LogUtils.log_info(f"end_stream_time: {time.time() - start_time}")
         if websocket.client_state == WebSocketState.CONNECTED:
             await websocket.send_text(COMMAND_DONE_FROM_SERVE)
 
-        if websocket.client_state == WebSocketState.CONNECTED:
             await websocket.send_text(follow_questions)
 
 
@@ -99,30 +94,37 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
 
     llm = LLMFactory.get_llm(
         mode_type=LLMType.get_enum_from_value(chat_request_data.model_type),
-        mode_name=chat_request_data.model_name)
+        mode_name=chat_request_data.model_name,
+    )
 
     inputs = [{"role": "user", "content": chat_request_data.data}]
     if chat_request_data.image_urls:
         LogUtils.log_info("image_urls: ", chat_request_data.image_urls)
 
-        images_content = generate_image_content(data=chat_request_data.data,
-                                                image_urls=chat_request_data.image_urls)
+        images_content = generate_image_content(
+            data=chat_request_data.data, image_urls=chat_request_data.image_urls
+        )
         inputs = [
-            {"role": "user",
-             "content": images_content},
+            {"role": "user", "content": images_content},
         ]
 
-    chat_manager.add_chat_record(chat_request_data.user_name, chat_request_data.session_id, inputs)
+    chat_manager.add_chat_record(
+        chat_request_data.user_name, chat_request_data.session_id, inputs
+    )
 
     if chat_request_data.multi_turn_chat_enabled:
-        history = get_chat_history(chat_request_data.user_name, chat_request_data.session_id)
+        history = get_chat_history(
+            chat_request_data.user_name, chat_request_data.session_id
+        )
     else:
         history = inputs
 
     # response = llm.stream(history)
     response = llm.stream(history, config={"callbacks": [langfuse_handler]})
     LogUtils.log_info("response :", response)
-    send_task = asyncio.create_task(send_streaming_data(chat_request_data, websocket, response, llm))
+    send_task = asyncio.create_task(
+        send_streaming_data(chat_request_data, websocket, response, llm)
+    )
 
     while not send_task.done():
         try:
@@ -132,7 +134,9 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
             if COMMAND_STOP_FROM_CLIENT in request_msg:
                 LogUtils.log_info("receive stop command")
                 send_task.cancel()  # 取消发送任务
-                await asyncio.gather(send_task, return_exceptions=True)  # 等待任务完成或被取消
+                await asyncio.gather(
+                    send_task, return_exceptions=True
+                )  # 等待任务完成或被取消
                 LogUtils.log_info("send_stop_flag")
                 stop_flag = '<span style="color: #5989F7;"><br><br>[[客户端停止接收信息]]<br><br></span>'
                 await websocket.send_text(stop_flag)
@@ -166,7 +170,9 @@ async def websocket_endpoint(websocket: WebSocket):
             except Exception as e:
                 LogUtils.log_error(f"Error while receiving or processing data: {e}")
                 traceback.print_exc()
-                await websocket.send_text(f"Error while receiving or processing data: {e}")
+                await websocket.send_text(
+                    f"Error while receiving or processing data: {e}"
+                )
                 await websocket.send_text(COMMAND_DONE_FROM_SERVE)
 
     except Exception as e:

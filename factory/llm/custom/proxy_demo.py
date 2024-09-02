@@ -1,4 +1,15 @@
 from openai import OpenAI
+
+
+def get_image_base64_url(image_path: str, quality=85):
+    import base64
+    # 打开图片文件
+    with open(image_path, "rb") as image_file:
+        img_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+    print(len(img_base64))
+    return f"data:image/jpeg;base64,{img_base64}"
+
+
 # https://github.com/ultrasev/llmproxy
 
 # api_key = "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"
@@ -11,25 +22,18 @@ model = "gemini-1.5-pro"
 BASE_URL = "https://llmapi.ultrasev.com/v2/gemini"
 
 client = OpenAI(base_url=BASE_URL, api_key=api_key)
-
-image_url="https://icehope-1326453681.cos.ap-beijing.myqcloud.com/images/upload/2024-08-04-11-16-23-boy_1.jpg"
+# base64 = get_image_base64_url("math.png")
+# inputs = [
+#     {"role": "user",
+#      "content": [
+#          {"type": "text", "text": "这张图片描述了什么"},
+#          {"type": "image_url", "image_url": {"url": base64}},
+#      ]},
+# ]
 inputs = [
-    {"role": "user",
-     "content": [
-         {"type": "text", "text": "这张图片描述了什么"},
-         {"type": "image_url", "image_url": {"url": image_url}},
-     ]},
+    {"role": "system", "content": "You are a helpful assistant。"},
+    {"role": "user", "content": "你是谁"}
 ]
-
-# response = client.chat.completions.create(
-#     model=model,
-#     messages=[
-#         {"role": "system", "content": "You are a helpful assistant。"},
-#         {"role": "user", "content": "what is the meaning of life?"}
-#     ],
-#     stream=False
-# )
-
 response = client.chat.completions.create(
     model=model,
     messages=inputs,

@@ -2,8 +2,6 @@
 
 # Groq
 GROQ_NAMES = [
-    ("llama3-groq-70b-8192-tool-use-preview", 0.0, 0.0),
-    ("llama3-groq-8b-8192-tool-use-preview", 0.0, 0.0),
     ("llama-3.1-70b-versatile", 0.0, 0.0),
     ("llama-3.1-8b-instant", 0.0, 0.0),
     ("llama3-70b-8192", 0.0, 0.0),
@@ -151,10 +149,11 @@ MISTRAL_NAMES = [
 ]
 # https://agicto.com/model
 GOOGLE_NAMES = [
-    ("gemini-pro", 185.42, 27.74),
-    ("gemini-pro-vision", 9.49, 27.74),
-    ("gemma-7b-it", 78.84, 78.84),
-    ("gemma-2b-it", 0.73, 0.73),
+    ("gemini-1.5-pro", 25.55, 76.65),
+    ("gemini-1.5-flash", 0.55, 2.19),
+    ("gemini-pro", 3.65, 10.95),
+    ("gemma2-9b-it", 0, 0),
+    ("gemma-7b-it", 0, 0),
 ]
 # https://agicto.com/model
 COHERE_NAMES = [

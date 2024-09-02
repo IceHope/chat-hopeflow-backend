@@ -12,3 +12,4 @@ class ChatRequestData(BaseModel):
     model_type: Optional[str] = Field(default=None, description="模型类型")
     model_name: Optional[str] = Field(default=None, description="模型名称")
     image_urls: Optional[List[str]] = Field(default=None, description="图片地址")
+    rag_file_ids: Optional[List[str]] = Field(default=None, description="文件id")
