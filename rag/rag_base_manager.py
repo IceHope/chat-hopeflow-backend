@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List
+from typing import List, Tuple
 
 from dotenv import load_dotenv
 from langfuse.llama_index import LlamaIndexCallbackHandler
@@ -21,6 +21,7 @@ from rag.managers.rerank_manager import RerankManager
 from rag.managers.retriever_manager import RetrieverManager
 from rag.managers.vector_store_manager import VectorStoreManager
 from utils.log_utils import LogUtils
+from controller.rag.rag_config import RagFrontendConfig
 
 load_dotenv()
 os.environ["LANGFUSE_SECRET_KEY"] = os.getenv("LANGFUSE_SECRET_KEY")
@@ -173,8 +174,11 @@ class RagBaseManager:
         )
 
     def retrieve_chunk(
-        self, query: str, filters: MetadataFilters = None
-    ) -> List[NodeWithScore]:
+        self,
+        query: str,
+        rag_config: RagFrontendConfig = None,
+        filters: MetadataFilters = None,
+    ) -> Tuple[List[NodeWithScore], str]:
         LogUtils.log_info(f"retrieve_chunk: {query}")
         # 1. query rewrite
         rewrite_query = self.query_manager.query_rewrite(query)
@@ -186,53 +190,70 @@ class RagBaseManager:
         start_time = time.time()
         # 2. retrieve
         retrieve_nodes = self.retriever_manager.retrieve_chunk(
-            query=origin_query, filters=filters
+            query=origin_query, filters=filters, rag_config=rag_config
         )
-
-        retrieve_time = time.time()
-        retrieve_elapsed_time = round(retrieve_time - start_time, 2)
-        LogUtils.log_info(
-            f"retrieve_chunk elapsed_time :{retrieve_elapsed_time} seconds"
-        )
-
-        # 3. rerank
-        rerank_nodes = self.rerank_manager.rerank(origin_query, retrieve_nodes)
-
-        rerank_elapsed_time = round(time.time() - retrieve_time, 2)
-        LogUtils.log_info(f"rerank elapsed_time: {rerank_elapsed_time} seconds")
+        retrieve_elapsed_time = str(round(time.time() - start_time, 2))
+        LogUtils.log_info(f"retrieve_elapsed_time :{retrieve_elapsed_time} seconds")
 
         langfuse_callback_handler.flush()
 
-        return rerank_nodes
+        return retrieve_nodes, retrieve_elapsed_time
 
     async def aretrieve_chunk(
-        self, query: str, filters: MetadataFilters = None
-    ) -> List[NodeWithScore]:
-        return self.retrieve_chunk(query, filters)
+        self,
+        query: str,
+        rag_config: RagFrontendConfig = None,
+        filters: MetadataFilters = None,
+    ) -> Tuple[List[NodeWithScore], str]:
+        return self.retrieve_chunk(query, rag_config, filters)
+
+    def rerank_chunks(
+        self,
+        origin_query: str,
+        retrieve_nodes: list[NodeWithScore],
+        rag_config: RagFrontendConfig = None,
+    ) -> Tuple[List[NodeWithScore], str]:
+        start_time = time.time()
+
+        rerank_nodes = self.rerank_manager.rerank(
+            origin_query, retrieve_nodes, rag_config
+        )
+
+        rerank_elapsed_time = str(round(time.time() - start_time, 2))
+        LogUtils.log_info(f"rerank_elapsed_time: {rerank_elapsed_time} seconds")
+
+        langfuse_callback_handler.flush()
+
+        return rerank_nodes, rerank_elapsed_time
+
+    async def arerank_chunks(
+        self,
+        origin_query: str,
+        retrieve_nodes: list[NodeWithScore],
+        rag_config: RagFrontendConfig = None,
+    ) -> Tuple[List[NodeWithScore], str]:
+        return self.rerank_chunks(origin_query, retrieve_nodes, rag_config)
 
     def generate_image_nodes_response(
         self, query: str, image_nodes: list[NodeWithScore]
-    ):
+    ) -> Tuple[List[NodeWithScore], str]:
+        start_time = time.time()
+
         reply = self.image_qa_manager.generate_image_node_answer(query, image_nodes)
+
+        iamge_qa_elapsed_time = str(round(time.time() - start_time, 2))
+        LogUtils.log_info(f"iamge_qa_elapsed_time : {iamge_qa_elapsed_time} seconds")
         LogUtils.log_info(f"generate_image_nodes_response:\n {reply}")
         if reply:
             for image_node in image_nodes:
                 image_node.node.set_content(reply)
         langfuse_callback_handler.flush()
-        return image_nodes
+        return image_nodes, iamge_qa_elapsed_time
 
     async def agenerate_image_nodes_response(
         self, query: str, image_nodes: list[NodeWithScore]
-    ):
-        reply = await self.image_qa_manager.agenerate_image_node_answer(
-            query, image_nodes
-        )
-        LogUtils.log_info(f"agenerate_image_nodes_response:\n {reply}")
-        if reply:
-            for image_node in image_nodes:
-                image_node.node.set_content(reply)
-        langfuse_callback_handler.flush()
-        return image_nodes
+    ) -> Tuple[List[NodeWithScore], str]:
+        return self.generate_image_nodes_response(query, image_nodes)
 
     def generate_chat_stream_response(self, query: str, nodes: list[NodeWithScore]):
         reply = self.generate_manager.generate_stream_response(query, nodes)

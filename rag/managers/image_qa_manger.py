@@ -1,5 +1,4 @@
 import time
-import asyncio
 
 from llama_index.core.schema import NodeWithScore
 
@@ -51,42 +50,4 @@ class ImageNodeQAManager:
             return response
         except Exception as e:
             LogUtils.log_error("发生了一个错误：", str(e))
-            return ""
-
-    async def agenerate_image_node_answer(
-        self, query: str, image_nodes: list[NodeWithScore]
-    ):
-        image_urls = []
-        for image_node in image_nodes:
-            image_urls.append(
-                get_image_base64_url(image_node.node.metadata["file_path"])
-            )
-
-        inputs = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": IMAGE_QA_PROMPT.format(query=query),
-                    },
-                ]
-                + [
-                    {"type": "image_url", "image_url": {"url": url}}
-                    for url in image_urls
-                ],
-            },
-        ]
-        start_time = time.time()
-
-        try:
-            response = await asyncio.to_thread(self.multi_modal_llm.invoke, inputs)
-            response_content = response.content
-
-            cost_time = round(time.time() - start_time, 2)
-            LogUtils.log_info(f"async multi_modal_llm cost time: {cost_time} seconds")
-            LogUtils.log_info(f"async multi_modal_llm answer: {response_content}")
-            return response_content
-        except Exception as e:
-            LogUtils.log_error("异步处理中发生了一个错误：", str(e))
             return ""

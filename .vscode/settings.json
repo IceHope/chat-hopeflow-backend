@@ -1,0 +1,18 @@
+{
+    "python.analysis.extraPaths": [
+        "./rag",
+        "./config",
+        "./dao",
+        "./factory",
+        "./schema",
+        "./utils"
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/rag", // 添加你的自定义模块路径
+        "${workspaceFolder}/config",
+        "${workspaceFolder}/dao",
+        "${workspaceFolder}/factory",
+        "${workspaceFolder}/schema",
+        "${workspaceFolder}/utils",
+    ]
+}

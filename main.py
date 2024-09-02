@@ -12,6 +12,8 @@ from controller.chat_controller import chat_router
 from controller.file_controller import file_router
 from controller.rag.rag_controller import rag_router
 from controller.user_controller import user_router
+from controller.config.config_controller import config_router
+
 # 正常情况日志级别使用 INFO，需要定位时可以修改为 DEBUG，此时 SDK 会打印和服务端的通信信息
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
@@ -33,6 +35,7 @@ app.include_router(storyline_router)
 app.include_router(file_router)
 app.include_router(user_router)
 app.include_router(rag_router)
+app.include_router(config_router)
 
 
 @app.get("/")

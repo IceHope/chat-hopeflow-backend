@@ -19,6 +19,7 @@ from controller.rag.request_type import (
     FileIdKnowledgeRequest,
     FileIdChunkRequest,
 )
+from controller.rag.rag_config import RagFrontendConfig
 from dao.knowledge_dao import KnowledgeDao
 from rag.rag_base_manager import RagBaseManager, check_image_node
 from schema.chat_schema import ChatRequestData
@@ -26,9 +27,9 @@ from utils.constants import (
     COMMAND_DONE_FROM_SERVE,
     COMMAND_STOP_FROM_CLIENT,
     COMMAND_STREAM_START_FROM_SERVE,
-    RAG_EVENT_GENERATE_START,
     RAG_EVENT_IMAGE_QA_DONE,
     RAG_EVENT_IMAGE_QA_START,
+    RAG_RERANK_CHUNK_DONE,
     RAG_RETRIEVE_CHUNK_DONE,
     RAG_RETRIEVE_CHUNK_START,
 )
@@ -83,17 +84,17 @@ def query_chunk_by_file_id(file: FileIdChunkRequest):
 @observe()
 async def send_streaming_data(chat_request_data, websocket, all_nodes):
     start_time = time.time()
+    # 4.1 send generate start flag ,not need ,auto
 
-    await websocket.send_text(RAG_EVENT_GENERATE_START)
-    LogUtils.log_info(RAG_EVENT_GENERATE_START)
+    # 4.2 send stream start flag
+    await websocket.send_text(COMMAND_STREAM_START_FROM_SERVE)
+    await asyncio.sleep(0)
 
+    # 4.3 generate stream
     stream_response = rag_base_manager.generate_chat_stream_response(
         chat_request_data.data, all_nodes
     )
     final_result = ""
-    await websocket.send_text(COMMAND_STREAM_START_FROM_SERVE)
-    LogUtils.log_info(COMMAND_STREAM_START_FROM_SERVE)
-
     try:
         for chunk in stream_response.response_gen:
             if chunk is not None:
@@ -110,8 +111,7 @@ async def send_streaming_data(chat_request_data, websocket, all_nodes):
 
         if websocket.client_state == WebSocketState.CONNECTED:
             await websocket.send_text(COMMAND_DONE_FROM_SERVE)
-
-        if websocket.client_state == WebSocketState.CONNECTED:
+            await asyncio.sleep(0)
             await websocket.send_text(follow_questions)
 
 
@@ -124,48 +124,62 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
 
     origin_query = chat_request_data.data
 
-    start_time = time.time()
+    rag_config = RagFrontendConfig(**chat_request_data.model_dump())
+    LogUtils.log_info("rag_config =", rag_config)
 
+    # 1.1 send retrieve start flag
     await websocket.send_text(RAG_RETRIEVE_CHUNK_START)
-    LogUtils.log_info(RAG_RETRIEVE_CHUNK_START)
+    await asyncio.sleep(0)
 
-    # 1.1 chunk_nodes
-    chunk_nodes = await rag_base_manager.aretrieve_chunk(query=origin_query)
-    # chunk_nodes = rag_base_manager.retrieve_chunk(query=origin_query)
+    # 1.2 retrieve nodes
+    retrieve_nodes, retrieve_cost_time = await rag_base_manager.aretrieve_chunk(
+        query=origin_query, rag_config=rag_config
+    )
 
-    chunk_done_time = time.time()
-    chunk_cost_time = str(round(chunk_done_time - start_time, 2))
+    # 1.3 retrieve done
+    await websocket.send_text(RAG_RETRIEVE_CHUNK_DONE + retrieve_cost_time)
+    await asyncio.sleep(0)
 
-    await websocket.send_text(RAG_RETRIEVE_CHUNK_DONE)
-    LogUtils.log_info(RAG_RETRIEVE_CHUNK_DONE, f"{chunk_cost_time} s")
+    # 2.1 send rerank start flag, not need, when retrieve done,auto rerank
 
+    # 2.2 rerank nodes
+    rerank_nodes, rerank_cost_time = rag_base_manager.rerank_chunks(
+        origin_query=origin_query, retrieve_nodes=retrieve_nodes, rag_config=rag_config
+    )
+    # 2.3 rerank done
+    await websocket.send_text(RAG_RERANK_CHUNK_DONE + rerank_cost_time)
+    await asyncio.sleep(0)
+
+    # 2.4 send rerank nodes to frontend
     nodes_payload = FrontendNodesPayload(
-        chunk_frontend_nodes=cast_nodes_to_frontend(chunk_nodes)
+        chunk_frontend_nodes=cast_nodes_to_frontend(rerank_nodes)
     )
     nodes_payload_json = json.dumps(
         nodes_payload.__dict__, default=lambda o: o.__dict__
     )
     await websocket.send_text(nodes_payload_json)
+    await asyncio.sleep(0)
 
-    # 2. check image
-    text_nodes, image_nodes = check_image_node(chunk_nodes)
+    # 3.1 check image
+    text_nodes, image_nodes = check_image_node(rerank_nodes)
     if image_nodes:
+        # 3.2 send image_qa flag
         await websocket.send_text(RAG_EVENT_IMAGE_QA_START)
-        LogUtils.log_info(RAG_EVENT_IMAGE_QA_START)
+        await asyncio.sleep(0)
 
-        # 2.1 image_nodes
-        image_nodes = await rag_base_manager.agenerate_image_nodes_response(
-            origin_query, image_nodes
+        # 3.3 modul llm generate
+        image_nodes, image_qa_cost_time = (
+            await rag_base_manager.agenerate_image_nodes_response(
+                origin_query, image_nodes
+            )
         )
-
-        image_cost_time = str(round(time.time() - chunk_done_time, 2))
-
-        await websocket.send_text(RAG_EVENT_IMAGE_QA_DONE)
-        LogUtils.log_info(RAG_EVENT_IMAGE_QA_DONE, f"{image_cost_time} s")
+        # 3.4 image_qa done
+        await websocket.send_text(RAG_EVENT_IMAGE_QA_DONE + image_qa_cost_time)
+        await asyncio.sleep(0)
 
     all_nodes = text_nodes + image_nodes
 
-    # 3. chat
+    # 4 generate final answer
 
     send_task = asyncio.create_task(
         send_streaming_data(chat_request_data, websocket, all_nodes)
