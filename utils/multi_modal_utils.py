@@ -1,5 +1,5 @@
-from factory.llm_factory import LLMFactory
-from factory.mode_type import LLMType
+from models.factory.llm_factory import LLMFactory
+from models.model_type import LLMType
 from rag.config.rag_config import RagConfiguration
 from utils.log_utils import LogUtils
 

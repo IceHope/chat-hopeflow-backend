@@ -8,10 +8,10 @@ from langgraph.constants import END
 from langgraph.graph import StateGraph
 from starlette.websockets import WebSocket
 
-from factory.llm_factory import LLMFactory
-from factory.mode_type import LLMType
+from models.factory.llm_factory import LLMFactory
+from models.model_type import LLMType
 from schema.agent_schema import TranslationAgentSchema
-from utils.constants import COMMAND_DONE_FROM_SERVE
+from utils.command_constants import CHAT_STREAM_SERVE_DONE
 
 translate_human_router = APIRouter()
 
@@ -147,7 +147,7 @@ async def human_feedback_translation(state):
     web_socket = state.get("web_socket")
     # 等待前端的反馈
     await web_socket.send_text("\n #### 请确认审查意见是否满意Y，如果不满意请发送修改意见。")
-    await web_socket.send_text(COMMAND_DONE_FROM_SERVE)
+    await web_socket.send_text(CHAT_STREAM_SERVE_DONE)
 
     human_feedback = await web_socket.receive_text()
     print("\nHuman feedback:", human_feedback)
@@ -212,7 +212,7 @@ Output only the new translation and nothing else."""
         await web_socket.send_text(str(chunk))
         translation_2 += chunk
 
-    await web_socket.send_text(COMMAND_DONE_FROM_SERVE)
+    await web_socket.send_text(CHAT_STREAM_SERVE_DONE)
     return {"translation_2": translation_2}
 
 

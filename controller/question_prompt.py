@@ -1,11 +1,11 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from factory.llm_factory import LLMFactory
-from factory.mode_type import LLMType
+from models.factory.llm_factory import LLMFactory
+from models.model_type import LLMType
 from utils.log_utils import LogUtils
 
-QUESTION_PROMPT = """
+SUGGEST_QUESTION_PROMPT = """
     你是一个善于引导用户思维的专家,请根据用户的提问,和对应的回答,提出{number}个相关的引导问题
     只回复最重要的引导问题,不要回复其他内容,问题要简洁,
     每个问题不能超过15个字符,以[Q]开头,以?结尾
@@ -23,13 +23,15 @@ QUESTION_PROMPT = """
     [Q]中国的人口分布有哪儿些特点?
 """
 
+
 follow_question_llm = LLMFactory.get_llm(LLMType.ZHIPU, "GLM-4-Flash")
 
 
 def generate_follow_questions(ask: str, reply: str):
-    prompt = ChatPromptTemplate.from_template(QUESTION_PROMPT)
-    # 这里可以选择特定的大模型
-    chain = prompt | follow_question_llm | StrOutputParser()
-    follow_questions = chain.invoke({"number": 3, "ask": ask, "ai_answer": reply})
+    suggest_prompt = ChatPromptTemplate.from_template(SUGGEST_QUESTION_PROMPT)
+    suggest_chain = suggest_prompt | follow_question_llm | StrOutputParser()
+    follow_questions = suggest_chain.invoke(
+        {"number": 3, "ask": ask, "ai_answer": reply}
+    )
     LogUtils.log_info(f"follow_questions: {follow_questions}")
     return follow_questions

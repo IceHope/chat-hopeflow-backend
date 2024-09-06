@@ -8,7 +8,7 @@ from llama_index.core.vector_stores.types import (
 
 from rag.retriver.hope_retriever import HopeRetriever
 from utils.log_utils import LogUtils
-from controller.rag.rag_config import RagFrontendConfig
+from schema.rag_config import RagFrontendConfig
 
 
 class RetrieverManager:

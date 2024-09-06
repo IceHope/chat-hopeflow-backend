@@ -1,4 +1,3 @@
-import os
 from typing import Optional, List
 
 from llama_index.core import Settings, get_response_synthesizer, PromptTemplate
@@ -6,8 +5,6 @@ from llama_index.core.base.response.schema import RESPONSE_TYPE
 from llama_index.core.callbacks import CallbackManager
 from llama_index.core.prompts import PromptType
 from llama_index.core.schema import NodeWithScore
-
-from utils.log_utils import LogUtils
 
 RAG_QUERY_PROMPT = """
 你是一个专门用于问答任务的智能助手。
@@ -33,18 +30,9 @@ RAG_TEXT_QA_PROMPT = PromptTemplate(
 class GenerateManager:
     def __init__(self, callback_manager: Optional[CallbackManager] = None):
         self.callback_manager = callback_manager or Settings.callback_manager
-        from llama_index.llms.openai import OpenAI
-
-        generate_llm = OpenAI(
-            model="gpt-4o-mini",
-            api_key=os.getenv("OPEN_AGI_API_KEY"),
-            api_base=os.getenv("OPEN_AGI_BASE_URL"),
-            temperature=0.7,
-        )
 
         self.response_synthesizer = get_response_synthesizer(
             text_qa_template=RAG_TEXT_QA_PROMPT,
-            llm=generate_llm,
             callback_manager=self.callback_manager,
             streaming=True,
         )

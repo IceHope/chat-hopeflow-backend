@@ -12,10 +12,10 @@ from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 from starlette.websockets import WebSocket
 
-from factory.llm_factory import LLMFactory
-from factory.mode_type import LLMType
+from models.factory.llm_factory import LLMFactory
+from models.model_type import LLMType
 from schema.agent_schema import StoryLineAgentSchema
-from utils.constants import COMMAND_DONE_FROM_SERVE
+from utils.command_constants import CHAT_STREAM_SERVE_DONE
 
 load_dotenv()
 
@@ -203,7 +203,7 @@ async def generate_storyline_detail(state: StoryState):
 
 async def generate_finish(state: StoryState):
     web_socket = state.get("web_socket")
-    await web_socket.send_text(COMMAND_DONE_FROM_SERVE)
+    await web_socket.send_text(CHAT_STREAM_SERVE_DONE)
     print("\n--generate_finish--\n")
     return {"current_detail_index": state.get("current_detail_index") - 1}
 

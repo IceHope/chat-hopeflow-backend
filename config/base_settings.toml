@@ -4,3 +4,4 @@ admin_test = "admin_test"
 [redis]
 redis_host = 'localhost'
 redis_port = 6379
+redis_chat_table=2

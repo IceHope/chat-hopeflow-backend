@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class ChatRequestData(BaseModel):
     multi_turn_chat_enabled: bool = Field(default=True, description="是否多轮对话")
+    rag_multi_turn_chat_enabled: bool = Field(default=False, description="是否多轮对话")
     user_name: str = Field(description="用户名")
     session_id: int = Field(description="会话id,时间戳")
     data: str = Field(description="用户的问题")

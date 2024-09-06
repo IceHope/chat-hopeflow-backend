@@ -120,6 +120,14 @@ class KnowledgeDao:
         """通过管理员获取知识列表"""
         return self.get_all_knowledges_by_user_name("admin")
 
+    def get_all_knowledges(self) -> List[KnowledgeModel]:
+        """查询所有知识"""
+        with get_db() as db:
+            knowledge_list = db.query(Knowledge).all()
+            return [
+                KnowledgeModel.model_validate(knowledge) for knowledge in knowledge_list
+            ]
+
     def update_knowledge_by_file_id(
         self, file_id: str, file_title: str
     ) -> Optional[KnowledgeModel]:

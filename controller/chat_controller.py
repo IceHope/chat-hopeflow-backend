@@ -11,14 +11,10 @@ from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from controller.question_prompt import generate_follow_questions
 from dao.redis_dao import ChatRedisManager
-from factory.llm_factory import LLMFactory
-from factory.mode_type import LLMType
+from models.factory.llm_factory import LLMFactory
+from models.model_type import LLMType
 from schema.chat_schema import ChatRequestData
-from schema.custom_model import get_all_custom_models
-from utils.constants import (
-    COMMAND_DONE_FROM_SERVE,
-    COMMAND_STOP_FROM_CLIENT,
-)
+from utils.command_constants import CHAT_STREAM_CLIENT_STOP, CHAT_STREAM_SERVE_DONE
 from utils.log_utils import LogUtils
 
 chat_router = APIRouter()
@@ -40,7 +36,9 @@ def generate_image_content(data: str, image_urls: List[str]) -> list:
 
 
 @observe()
-async def send_streaming_data(chat_request_data, websocket, response, llm):
+async def send_streaming_data(
+    chat_request_data, websocket, response, llm, COMMAND_DONE_FROM_SERVE=None
+):
     final_result = ""
     start_time = time.time()
     LogUtils.log_info(f"start_time: {start_time}")
@@ -72,7 +70,7 @@ async def send_streaming_data(chat_request_data, websocket, response, llm):
         )
         LogUtils.log_info(f"end_stream_time: {time.time() - start_time}")
         if websocket.client_state == WebSocketState.CONNECTED:
-            await websocket.send_text(COMMAND_DONE_FROM_SERVE)
+            await websocket.send_text(CHAT_STREAM_SERVE_DONE)
 
             await websocket.send_text(follow_questions)
 
@@ -131,7 +129,7 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
             # LogUtils.log_info("waiting for message")
             request_msg = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
             LogUtils.log_info("receive new text: ", request_msg)
-            if COMMAND_STOP_FROM_CLIENT in request_msg:
+            if CHAT_STREAM_CLIENT_STOP in request_msg:
                 LogUtils.log_info("receive stop command")
                 send_task.cancel()  # 取消发送任务
                 await asyncio.gather(
@@ -173,7 +171,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text(
                     f"Error while receiving or processing data: {e}"
                 )
-                await websocket.send_text(COMMAND_DONE_FROM_SERVE)
+                await websocket.send_text(CHAT_STREAM_SERVE_DONE)
 
     except Exception as e:
         LogUtils.log_error(f"Error: {e}")
@@ -184,11 +182,6 @@ async def websocket_endpoint(websocket: WebSocket):
             except RuntimeError as e:
                 LogUtils.log_error(f"Error while closing websocket: {e}")
         LogUtils.log_info("Connection closed")
-
-
-@chat_router.get("/chat/modes")
-async def get_chat_models():
-    return {"models": get_all_custom_models()}
 
 
 class HistorySnapshots(BaseModel):
@@ -210,3 +203,8 @@ class HistoryRecord(BaseModel):
 @chat_router.post("/chat/history/record")
 async def get_history_record(request: HistoryRecord):
     return chat_manager.get_history_record(request.user_name, request.session_id)
+
+
+@chat_router.post("/chat/history/delete")
+async def delete_history_record(request: HistoryRecord):
+    return chat_manager.delete_chat_record(request.user_name, request.session_id)

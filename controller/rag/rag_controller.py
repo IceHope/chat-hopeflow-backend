@@ -9,30 +9,22 @@ from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from controller.question_prompt import generate_follow_questions
-from controller.rag.frontend_node import (
-    FrontendNodesPayload,
-    cast_node_frontend,
-    cast_nodes_to_frontend,
-)
 from controller.rag.request_type import (
     UserNameRequest,
     FileIdKnowledgeRequest,
     FileIdChunkRequest,
 )
-from controller.rag.rag_config import RagFrontendConfig
 from dao.knowledge_dao import KnowledgeDao
+from dao.redis_dao import ChatRedisManager
 from rag.rag_base_manager import RagBaseManager, check_image_node
 from schema.chat_schema import ChatRequestData
-from utils.constants import (
-    COMMAND_DONE_FROM_SERVE,
-    COMMAND_STOP_FROM_CLIENT,
-    COMMAND_STREAM_START_FROM_SERVE,
-    RAG_EVENT_IMAGE_QA_DONE,
-    RAG_EVENT_IMAGE_QA_START,
-    RAG_RERANK_CHUNK_DONE,
-    RAG_RETRIEVE_CHUNK_DONE,
-    RAG_RETRIEVE_CHUNK_START,
+from schema.frontend_node import (
+    FrontendNodesPayload,
+    cast_node_frontend,
+    cast_nodes_to_frontend,
 )
+from schema.rag_config import RagFrontendConfig
+from utils.command_constants import *
 from utils.log_utils import LogUtils
 
 rag_router = APIRouter()
@@ -41,12 +33,15 @@ knowledge_dao = KnowledgeDao()
 
 rag_base_manager = RagBaseManager()
 
+chat_manager = ChatRedisManager()
+
 
 @rag_router.post("/rag/knowledge/query_all")
 def query_all_knowledge(user: UserNameRequest):
     """查询所有知识"""
     LogUtils.log_info("query_all_knowledge :", user.user_name)
-    return knowledge_dao.get_all_knowledges_by_user_name(user.user_name)
+    # return knowledge_dao.get_all_knowledges_by_user_name(user.user_name)
+    return knowledge_dao.get_all_knowledges()
 
 
 @rag_router.post("/rag/knowledge/query_all_chunk_by_file_id")
@@ -82,17 +77,20 @@ def query_chunk_by_file_id(file: FileIdChunkRequest):
 
 
 @observe()
-async def send_streaming_data(chat_request_data, websocket, all_nodes):
+async def send_streaming_data(chat_request_data, parse_question, websocket, all_nodes):
+    """用解析之后的问题去问大模型
+    聊天记录也保存解析后的,后续解析更好的理解意图,不能用原始的问题,不然一直迭代,问题会越来越偏
+    """
     start_time = time.time()
     # 4.1 send generate start flag ,not need ,auto
 
     # 4.2 send stream start flag
-    await websocket.send_text(COMMAND_STREAM_START_FROM_SERVE)
+    await websocket.send_text(CHAT_STREAM_SERVE_START)
     await asyncio.sleep(0)
 
     # 4.3 generate stream
     stream_response = rag_base_manager.generate_chat_stream_response(
-        chat_request_data.data, all_nodes
+        parse_question, all_nodes
     )
     final_result = ""
     try:
@@ -103,16 +101,35 @@ async def send_streaming_data(chat_request_data, websocket, all_nodes):
             await asyncio.sleep(0)  # 让出控制权
 
     finally:
-
-        follow_questions = generate_follow_questions(
-            chat_request_data.data, final_result
+        inputs = [{"role": "user", "content": parse_question}]
+        chat_manager.add_chat_record(
+            chat_request_data.user_name, chat_request_data.session_id, inputs
         )
+
+        outputs = [
+            {
+                "role": "assistant",
+                "content": final_result,
+                "model_name": "",
+            }
+        ]
+        chat_manager.add_chat_record(
+            chat_request_data.user_name, chat_request_data.session_id, outputs
+        )
+
+        follow_questions = generate_follow_questions(parse_question, final_result)
         LogUtils.log_info(f"end_stream_time: {time.time() - start_time}")
 
         if websocket.client_state == WebSocketState.CONNECTED:
-            await websocket.send_text(COMMAND_DONE_FROM_SERVE)
-            await asyncio.sleep(0)
+            await websocket.send_text(CHAT_STREAM_SERVE_DONE)
             await websocket.send_text(follow_questions)
+
+
+def get_chat_history(user_name, session_id):
+    history = chat_manager.get_history_record(user_name, session_id)
+    LogUtils.log_info("history:")
+    LogUtils.log_info(history)
+    return history
 
 
 @observe()
@@ -122,18 +139,39 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
         user_id=chat_request_data.session_id,
     )
 
-    origin_query = chat_request_data.data
-
     rag_config = RagFrontendConfig(**chat_request_data.model_dump())
     LogUtils.log_info("rag_config =", rag_config)
 
-    # 1.1 send retrieve start flag
-    await websocket.send_text(RAG_RETRIEVE_CHUNK_START)
+    # 0.1 send parse question start
+    await websocket.send_text(RAG_PARSE_QUESTION_START)
     await asyncio.sleep(0)
+    if chat_request_data.rag_multi_turn_chat_enabled:
+        history = get_chat_history(
+            chat_request_data.user_name, chat_request_data.session_id
+        )
+        parse_question, parse_cost_time = rag_base_manager.parse_context_question(
+            origin_query=chat_request_data.data, context=history
+        )
+
+    else:
+        parse_question = chat_request_data.data
+        parse_cost_time = "0"
+
+    # 0.2 send parse question done
+    # await websocket.send_text(RAG_PARSE_QUESTION_DONE + parse_cost_time)
+    # await asyncio.sleep(0)
+    parse_send_text = parse_question + RAG_PARSE_QUESTION_DONE + parse_cost_time
+    await websocket.send_text(
+        json.dumps({"rag_parse_context_question": parse_send_text})
+    )
+
+    # 1.1 send retrieve start flag
+    # await websocket.send_text(RAG_RETRIEVE_CHUNK_START)
+    # await asyncio.sleep(0)
 
     # 1.2 retrieve nodes
     retrieve_nodes, retrieve_cost_time = await rag_base_manager.aretrieve_chunk(
-        query=origin_query, rag_config=rag_config
+        query=parse_question, rag_config=rag_config
     )
 
     # 1.3 retrieve done
@@ -144,7 +182,9 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
 
     # 2.2 rerank nodes
     rerank_nodes, rerank_cost_time = rag_base_manager.rerank_chunks(
-        origin_query=origin_query, retrieve_nodes=retrieve_nodes, rag_config=rag_config
+        origin_query=parse_question,
+        retrieve_nodes=retrieve_nodes,
+        rag_config=rag_config,
     )
     # 2.3 rerank done
     await websocket.send_text(RAG_RERANK_CHUNK_DONE + rerank_cost_time)
@@ -170,7 +210,7 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
         # 3.3 modul llm generate
         image_nodes, image_qa_cost_time = (
             await rag_base_manager.agenerate_image_nodes_response(
-                origin_query, image_nodes
+                parse_question, image_nodes
             )
         )
         # 3.4 image_qa done
@@ -182,7 +222,7 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
     # 4 generate final answer
 
     send_task = asyncio.create_task(
-        send_streaming_data(chat_request_data, websocket, all_nodes)
+        send_streaming_data(chat_request_data, parse_question, websocket, all_nodes)
     )
 
     while not send_task.done():
@@ -190,7 +230,7 @@ async def perform_chat(websocket, chat_request_data: ChatRequestData):
             # LogUtils.log_info("waiting for message")
             request_msg = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
             LogUtils.log_info("receive new text: ", request_msg)
-            if COMMAND_STOP_FROM_CLIENT in request_msg:
+            if CHAT_STREAM_CLIENT_STOP in request_msg:
                 LogUtils.log_info("receive stop command")
                 send_task.cancel()  # 取消发送任务
                 await asyncio.gather(
@@ -232,7 +272,7 @@ async def chat_query_websocket(websocket: WebSocket):
                 await websocket.send_text(
                     f"Error while receiving or processing data: {e}"
                 )
-                await websocket.send_text(COMMAND_DONE_FROM_SERVE)
+                await websocket.send_text(CHAT_STREAM_SERVE_DONE)
 
     except Exception as e:
         LogUtils.log_error(f"Error: {e}")

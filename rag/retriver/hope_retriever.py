@@ -8,10 +8,7 @@ from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
     MetadataFilters,
 )
-from llama_index.core.indices.vector_store.retrievers import (
-    VectorIndexRetriever,
-)
-from controller.rag.rag_config import RagFrontendConfig
+from schema.rag_config import RagFrontendConfig
 
 
 class HopeRetriever:
@@ -20,7 +17,7 @@ class HopeRetriever:
             vector_store=vector_store,
         )
         # similarity_top_k=6 是每个query最原始的返回个数
-        self.base_retriever: VectorIndexRetriever = vector_store_index.as_retriever(
+        self.base_retriever = vector_store_index.as_retriever(
             similarity_top_k=6
         )
 
@@ -36,10 +33,10 @@ class HopeRetriever:
         )
 
     def retrieve(
-        self,
-        query: str,
-        rag_config: RagFrontendConfig = None,
-        filters: MetadataFilters = None,
+            self,
+            query: str,
+            rag_config: RagFrontendConfig = None,
+            filters: MetadataFilters = None,
     ) -> List[NodeWithScore]:
         # filters = MetadataFilters(
         #     filters=[ExactMatchFilter(key="file_name", value="uber_2021.pdf")]

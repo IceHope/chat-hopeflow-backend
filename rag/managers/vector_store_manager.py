@@ -51,5 +51,5 @@ class VectorStoreManager:
         elapsed_time = round(time() - start_time, 2)  # 计算耗时
         LogUtils.log_info(f"向量索引构建完成，耗时：{elapsed_time}秒")
 
-    def get_vectore_store(self):
+    def get_vector_store(self):
         return self.vector_store

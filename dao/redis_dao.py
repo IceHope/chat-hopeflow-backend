@@ -17,14 +17,15 @@ class ChatHistoryModel(BaseModel):
 
 
 class ChatRedisManager:
-    def __init__(self, redis_host='localhost', redis_port=6379):
+    def __init__(self, redis_table=None):
         redis_config = BaseConfiguration().get_redis_config()
+
         self.redis_client = redis.Redis(
             host=redis_config["redis_host"],
             port=redis_config["redis_port"],
-            decode_responses=True
+            decode_responses=True,
         )
-        self.redis_client.execute_command('SELECT', 2)
+        self.redis_client.execute_command("SELECT", redis_config["redis_chat_table"])
 
     def add_chat_record(self, username, sessionid, msg_list):
         key = f"{username}:{sessionid}"
@@ -54,7 +55,7 @@ class ChatRedisManager:
                 snapshot = {
                     "user_name": username,
                     "session_id": int(session_id),  # 转换为整数以保持一致性
-                    "last_msg": content
+                    "last_msg": content,
                 }
                 snapshots.append(snapshot)  # 将快照添加到列表中
         LogUtils.log_info("snapshots: ", snapshots)
@@ -76,23 +77,29 @@ class ChatRedisManager:
 
 
 def generate_random_message():
-    roles = ['user', 'assistant']
+    roles = ["user", "assistant"]
     return {
         "role": random.choice(roles),
-        "content": f"随机消息内容 {datetime.now().isoformat()}"
+        "content": f"随机消息内容 {datetime.now().isoformat()}",
     }
 
 
-def generate_test_data(num_users=3, num_sessions_per_user=5, num_messages_per_session=10):
+def generate_test_data(
+        num_users=3, num_sessions_per_user=5, num_messages_per_session=10
+):
     manager = ChatRedisManager()
-    manager.redis_client.execute_command('SELECT', 3)
+    manager.redis_client.execute_command("SELECT", 4)
     manager.redis_client.flushdb()
     for i in range(num_users):
         username = f"hope{i}"
         for j in range(num_sessions_per_user):
             time.sleep(1)
-            msg_list = [generate_random_message() for _ in range(num_messages_per_session)]
-            manager.add_chat_record(username=username, sessionid=str(int(time.time())), msg_list=msg_list)
+            msg_list = [
+                generate_random_message() for _ in range(num_messages_per_session)
+            ]
+            manager.add_chat_record(
+                username=username, sessionid=str(int(time.time())), msg_list=msg_list
+            )
 
 
 # Example usage:

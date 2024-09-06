@@ -2,20 +2,11 @@ import time
 
 from llama_index.core import Settings
 
-from costants.rag_constants import get_bge_embedding
 from rag.db.milvus.vector_store import load_hybrid_milvus
+from rag.managers.embedding_manager import EmbeddingManager
 from utils.log_utils import LogUtils
 
-
-def _init_embedding():
-    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-
-    start_time = time.time()
-    bge_embedding_constants = get_bge_embedding("bge-small-en-v1.5")
-    Settings.embed_model = HuggingFaceEmbedding(model_name=bge_embedding_constants[1])
-
-    LogUtils.log_info(f"Embedding model {bge_embedding_constants[0]} loaded in {time.time() - start_time} seconds")
-    LogUtils.log_info("Embedding model len = ", len(Settings.embed_model.get_text_embedding("hello")))
+embedding_manager = EmbeddingManager("bge-small-zh-v1.5")
 
 
 def _get_nodes():

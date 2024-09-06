@@ -19,11 +19,17 @@ class RagConfiguration:
     def get_milvus_uri(self):
         return self.config['rag']['milvus']['uri']
 
-    def get_bge_embedding_config(self):
-        return self.config['rag']['embedding']['bge']['source']
+    def get_embedding_config(self):
+        return self.config['rag']['embedding']['config']
 
-    def get_bge_embedding_m3_path(self):
-        return self.config['rag']['embedding']['bge-m3']['file_path']
+    def get_embedding_name(self):
+        return self.config['rag']['embedding']['config']['config_model_name']
+
+    def get_embedding_info(self, simple_embedding_name: str):
+        return self.config['rag']['embedding'][simple_embedding_name]
+
+    def get_retriever_config(self):
+        return self.config['rag']['retriver']
 
     def get_similarity_top_k(self):
         return self.config['rag']['retriver']['similarity_top_k']
@@ -33,5 +39,5 @@ class RagConfiguration:
 
 
 if __name__ == '__main__':
-    config = RagConfiguration().get_rerank_top_n()
-    print(config)
+    config = RagConfiguration().get_embedding_config()
+    print(config["type"])

@@ -1,4 +1,11 @@
+import os
 import time
+
+from dotenv import load_dotenv
+
+from rag.embedding.zhipu_embedding import ZhipuEmbedding
+
+load_dotenv()
 
 
 def test_ollama_embedding():
@@ -27,6 +34,13 @@ def test_ollama_vision():
     print(res['message']['content'])
 
 
+def test_zhipu():
+    embed_model = ZhipuEmbedding(api_key=os.getenv("ZHIPUAI_API_KEY"))
+    result = embed_model.get_text_embedding("你好")
+    print(len(result))
+
+
 if __name__ == '__main__':
-    test_ollama_embedding()
+    # test_ollama_embedding()
     # test_ollama_vision()
+    test_zhipu()

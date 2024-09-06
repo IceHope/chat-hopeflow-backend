@@ -16,7 +16,7 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.readers.file import PyMuPDFReader
 
 from rag.prompt.prompt import RAG_QUERY_PROMPT
-from rag.rerank.reranker import RagReranker
+from models.rerank.reranker import RagReranker
 from utils.log_utils import LogUtils
 
 load_dotenv()

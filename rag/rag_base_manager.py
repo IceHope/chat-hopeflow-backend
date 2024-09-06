@@ -11,6 +11,7 @@ from llama_index.core.schema import NodeWithScore
 from llama_index.core.vector_stores import MetadataFilters
 
 from dao.knowledge_dao import KnowledgeDao
+from models.llm.llamaindex.groq_llm import GroqLlmaFactory
 from rag.managers.chunk_manager import ChunkManager
 from rag.managers.embedding_manager import EmbeddingManager
 from rag.managers.generate_manager import GenerateManager
@@ -20,8 +21,9 @@ from rag.managers.reader_manager import ReaderManager
 from rag.managers.rerank_manager import RerankManager
 from rag.managers.retriever_manager import RetrieverManager
 from rag.managers.vector_store_manager import VectorStoreManager
+from rag.rag_utils import get_db_collection_name
+from schema.rag_config import RagFrontendConfig
 from utils.log_utils import LogUtils
-from controller.rag.rag_config import RagFrontendConfig
 
 load_dotenv()
 os.environ["LANGFUSE_SECRET_KEY"] = os.getenv("LANGFUSE_SECRET_KEY")
@@ -30,27 +32,6 @@ os.environ["LANGFUSE_HOST"] = os.getenv("LANGFUSE_HOST")
 
 langfuse_callback_handler = LlamaIndexCallbackHandler()
 Settings.callback_manager = CallbackManager([langfuse_callback_handler])
-
-
-def _init_llm() -> None:
-    """初始化LLM。"""
-
-    # from llama_index.llms.groq import Groq
-    #
-    # Settings.llm = Groq(
-    #     model="llama-3.1-8b-instant",
-    #     api_key=os.getenv("GROQ_API_KEY"),
-    #     api_base=os.getenv("GROQ_BASE_URL"),
-    #     temperature=0.7,
-    # )
-    from llama_index.llms.openai import OpenAI
-
-    Settings.llm = OpenAI(
-        model="gpt-4o-mini",
-        api_key=os.getenv("OPEN_AGI_API_KEY"),
-        api_base=os.getenv("OPEN_AGI_BASE_URL"),
-        temperature=0.7,
-    )
 
 
 def check_image_node(nodes: List[NodeWithScore]):
@@ -77,7 +58,7 @@ class RagBaseManager:
 
         self.user_name = user_name
 
-        _init_llm()
+        Settings.llm = GroqLlmaFactory().get_llm()
 
         self.query_manager = QueryManager()
         # 初始化数据访问对象
@@ -88,12 +69,14 @@ class RagBaseManager:
         self.chunk_manager = ChunkManager()
         self.embedding_manager = EmbeddingManager()
 
+        Settings.embed_model = self.embedding_manager.get_model()
+
         # 获取嵌入向量大小
         self.embedding_size = self.embedding_manager.get_dim()
 
         # 设置数据库集合名称
-        self.db_collection_name = (
-            f"hope_test_{self.embedding_manager.get_simple_model_name()}"
+        self.db_collection_name = get_db_collection_name(
+            self.embedding_manager.get_simple_model_name()
         )
 
         # 初始化向量存储管理器
@@ -103,7 +86,7 @@ class RagBaseManager:
         )
 
         self.retriever_manager = RetrieverManager(
-            vector_store=self.vector_store_manager.get_vectore_store(),
+            vector_store=self.vector_store_manager.get_vector_store(),
         )
         self.rerank_manager = RerankManager()
         self.image_qa_manager = ImageNodeQAManager()
@@ -111,6 +94,11 @@ class RagBaseManager:
 
         elapsed_time = round(time.time() - start_time, 2)  # 计算耗时
         LogUtils.log_info(f"HopeManager初始化完成,耗时: {elapsed_time}秒")
+
+    def parse_context_question(self, origin_query: str, context: str):
+        return self.query_manager.parse_context_question(
+            origin_query=origin_query, context=context
+        )
 
     def get_collection_name(self):
         return self.db_collection_name
@@ -180,17 +168,11 @@ class RagBaseManager:
         filters: MetadataFilters = None,
     ) -> Tuple[List[NodeWithScore], str]:
         LogUtils.log_info(f"retrieve_chunk: {query}")
-        # 1. query rewrite
-        rewrite_query = self.query_manager.query_rewrite(query)
-
-        LogUtils.log_info(f"rewrite_query: {rewrite_query}")
-
-        origin_query = query
 
         start_time = time.time()
         # 2. retrieve
         retrieve_nodes = self.retriever_manager.retrieve_chunk(
-            query=origin_query, filters=filters, rag_config=rag_config
+            query=query, filters=filters, rag_config=rag_config
         )
         retrieve_elapsed_time = str(round(time.time() - start_time, 2))
         LogUtils.log_info(f"retrieve_elapsed_time :{retrieve_elapsed_time} seconds")

@@ -4,20 +4,14 @@ version = "0.1.1"
 
 [rag.milvus]
 uri = "http://localhost:19530"
-collection_admin = "hope_admin"
-collection_guest = "hope_guest"
-collection_test = "hope_test"
 
-[rag.retriver]
-similarity_top_k = 6
-rerank_top_n = 3
+[rag.embedding.config]
+type = "bge"
+name = "bge-small-zh-v1.5"
 
-[rag.embedding.bge]
-source = "bge-small-zh-v1.5"
-embed_batch_size = 10
-
-[rag.embedding.bge-m3]
-file_path = "F:/HuggingFace/Embedding/bge-m3"
+[rag-rerank]
+type = "jina"
+name = "jina-reranker-v1-base-en"
 
 [rag.multi_modal]
 source = "gemini-1.5-flash"
