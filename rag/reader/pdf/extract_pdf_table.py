@@ -68,9 +68,10 @@ class ExtractPdfTable:
             ]
         )
 
-    def __init__(self, table_transformer_path):
-        # "F:/HuggingFace/Other/table-transformer-detection"
+    def __init__(self, table_transformer_path: str = None):
         # 加载 TableTransformer 模型
+        if table_transformer_path is None:
+            table_transformer_path = "F:/HuggingFace/Other/table-transformer-detection"
         start_time = time.time()
         self.model = AutoModelForObjectDetection.from_pretrained(table_transformer_path)
         LogUtils.log_info("TableTransformer 模型加载完成，耗时：{}s".format(time.time() - start_time))
@@ -169,8 +170,7 @@ class ExtractPdfTable:
 
 
 if __name__ == "__main__":
-    tabel_transform_path = "F:/HuggingFace/Other/table-transformer-detection"
-    extract = ExtractPdfTable(tabel_transform_path)
+    extract = ExtractPdfTable()
 
     # pdf_path = "F:/AiData/zh/103：大模型应用开发极简入门：基于 GPT-4 和 ChatGPT_2024.pdf"
     # pdf_path = "F:/AiData/table/attention_is_all_you_need.pdf"

@@ -78,16 +78,20 @@ class RagBaseManager:
         self.db_collection_name = get_db_collection_name(
             self.embedding_manager.get_simple_model_name()
         )
+        try:
 
-        # 初始化向量存储管理器
-        self.vector_store_manager = VectorStoreManager(
-            collection_name=self.db_collection_name,
-            embedding_size=self.embedding_size,
-        )
+            # 初始化向量存储管理器
+            self.vector_store_manager = VectorStoreManager(
+                collection_name=self.db_collection_name,
+                embedding_size=self.embedding_size,
+            )
 
-        self.retriever_manager = RetrieverManager(
-            vector_store=self.vector_store_manager.get_vector_store(),
-        )
+            self.retriever_manager = RetrieverManager(
+                vector_store=self.vector_store_manager.get_vector_store(),
+            )
+        except Exception as e:
+            LogUtils.log_error(f"初始化向量存储管理器失败: {e}")
+
         self.rerank_manager = RerankManager()
         self.image_qa_manager = ImageNodeQAManager()
         self.generate_manager = GenerateManager()
@@ -162,10 +166,10 @@ class RagBaseManager:
         )
 
     def retrieve_chunk(
-        self,
-        query: str,
-        rag_config: RagFrontendConfig = None,
-        filters: MetadataFilters = None,
+            self,
+            query: str,
+            rag_config: RagFrontendConfig = None,
+            filters: MetadataFilters = None,
     ) -> Tuple[List[NodeWithScore], str]:
         LogUtils.log_info(f"retrieve_chunk: {query}")
 
@@ -182,18 +186,18 @@ class RagBaseManager:
         return retrieve_nodes, retrieve_elapsed_time
 
     async def aretrieve_chunk(
-        self,
-        query: str,
-        rag_config: RagFrontendConfig = None,
-        filters: MetadataFilters = None,
+            self,
+            query: str,
+            rag_config: RagFrontendConfig = None,
+            filters: MetadataFilters = None,
     ) -> Tuple[List[NodeWithScore], str]:
         return self.retrieve_chunk(query, rag_config, filters)
 
     def rerank_chunks(
-        self,
-        origin_query: str,
-        retrieve_nodes: list[NodeWithScore],
-        rag_config: RagFrontendConfig = None,
+            self,
+            origin_query: str,
+            retrieve_nodes: list[NodeWithScore],
+            rag_config: RagFrontendConfig = None,
     ) -> Tuple[List[NodeWithScore], str]:
         start_time = time.time()
 
@@ -209,15 +213,15 @@ class RagBaseManager:
         return rerank_nodes, rerank_elapsed_time
 
     async def arerank_chunks(
-        self,
-        origin_query: str,
-        retrieve_nodes: list[NodeWithScore],
-        rag_config: RagFrontendConfig = None,
+            self,
+            origin_query: str,
+            retrieve_nodes: list[NodeWithScore],
+            rag_config: RagFrontendConfig = None,
     ) -> Tuple[List[NodeWithScore], str]:
         return self.rerank_chunks(origin_query, retrieve_nodes, rag_config)
 
     def generate_image_nodes_response(
-        self, query: str, image_nodes: list[NodeWithScore]
+            self, query: str, image_nodes: list[NodeWithScore]
     ) -> Tuple[List[NodeWithScore], str]:
         start_time = time.time()
 
@@ -233,7 +237,7 @@ class RagBaseManager:
         return image_nodes, iamge_qa_elapsed_time
 
     async def agenerate_image_nodes_response(
-        self, query: str, image_nodes: list[NodeWithScore]
+            self, query: str, image_nodes: list[NodeWithScore]
     ) -> Tuple[List[NodeWithScore], str]:
         return self.generate_image_nodes_response(query, image_nodes)
 

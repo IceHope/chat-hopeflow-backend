@@ -1,4 +1,7 @@
+from enum import Enum
 from typing import Optional
+
+from pydantic import BaseModel
 
 from schema.chat_schema import ChatRequestData
 
@@ -12,4 +15,19 @@ class TranslationAgentSchema(ChatRequestData):
 
 
 class StoryLineAgentSchema(ChatRequestData):
-    human_flag: bool = True
+    background_human_flag: bool = False
+    storyline_human_flag: bool = False
+    detail_human_flag: bool = False
+
+
+class AgentItemId(str, Enum):
+    TRANSLATE = "agent_translate"
+    STORY_LINE = "agent_storyline"
+
+
+class AgentConfigSchema(BaseModel):
+    item_id: str
+    title: str
+    desc: str
+    node_count: int
+    flow_desc: str

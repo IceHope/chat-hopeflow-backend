@@ -93,10 +93,15 @@ class MyMilvusClient:
 
 
 if __name__ == "__main__":
-    client = MyMilvusClient()
-    file_id = "35732709-653d-4bb5-9355-4f18db14e000"
-    nodes = client.search_nodes_from_file_id(
-        collect_name="test_frontend", file_id=file_id
-    )
-    for node in nodes:
-        pprint.pprint(node)
+    print("Hello world")
+    # client = MyMilvusClient()
+    # file_id = "35732709-653d-4bb5-9355-4f18db14e000"
+    # nodes = client.search_nodes_from_file_id(
+    #     collect_name="test_frontend", file_id=file_id
+    # )
+    # for node in nodes:
+    #     pprint.pprint(node)
+
+    client = MilvusClient(uri=RagConfiguration().get_milvus_uri())
+
+    # client.drop_collection("hope_test_bge_large_zh")

@@ -1,16 +1,15 @@
 import os
 import time
-from typing import Optional, List
 import uuid
+from typing import Optional, List
 
 from llama_index.core import Document, SimpleDirectoryReader
 from llama_index.readers.file import PyMuPDFReader
+from tqdm import tqdm
 
 from rag.reader.image_reader import HopeImageVisionLLMReader
 from rag.reader.pdf.extract_pdf_img import parse_pdf_to_images
 from utils.log_utils import LogUtils
-
-from tqdm import tqdm
 
 
 class ReaderManager:

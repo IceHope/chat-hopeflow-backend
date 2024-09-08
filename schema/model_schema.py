@@ -78,6 +78,12 @@ def get_all_llm_models() -> List[ModelSchema]:
         ),
         ModelSchema(
             modal_type=ModalType.LLM.value,
+            owner_type=LLMType.ZHIPU.value,
+            desc="智谱清言",
+            names=get_llm_model_names(ZHIPU_NAMES),
+        ),
+        ModelSchema(
+            modal_type=ModalType.LLM.value,
             owner_type=LLMType.DEEPSEEK.value,
             desc="DeepSeek",
             names=get_llm_model_names(DEEPSEEK_NAMES),
@@ -94,12 +100,7 @@ def get_all_llm_models() -> List[ModelSchema]:
             desc="百度千帆",
             names=get_llm_model_names(QIANFAN_NAMES),
         ),
-        ModelSchema(
-            modal_type=ModalType.LLM.value,
-            owner_type=LLMType.ZHIPU.value,
-            desc="智谱清言",
-            names=get_llm_model_names(ZHIPU_NAMES),
-        ),
+
         ModelSchema(
             modal_type=ModalType.LLM.value,
             owner_type=LLMType.BAICHUAN.value,

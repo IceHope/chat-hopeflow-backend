@@ -217,6 +217,6 @@ def parse_pdf_to_images(pdf_path: str) -> List[Tuple[str, List[str]]]:
 if __name__ == "__main__":
     # pdf_path = "F:/AiData/img/attention_is_all_you_need.pdf"
     # pdf_path = "F:/AiData/img/国家人工智能产业综合标准化体系建设指南（2024版）.pdf"
-    pdf_path = "F:/AiData/img/llama2_page8.pdf"
+    pdf_path = "F:/AiData/大模型应用开发极简入门：基于 GPT-4 和 ChatGPT_2024.pdf"
 
     parse_pdf_to_images(pdf_path=pdf_path)

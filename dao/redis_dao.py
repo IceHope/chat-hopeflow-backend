@@ -19,13 +19,15 @@ class ChatHistoryModel(BaseModel):
 class ChatRedisManager:
     def __init__(self, redis_table=None):
         redis_config = BaseConfiguration().get_redis_config()
-
-        self.redis_client = redis.Redis(
-            host=redis_config["redis_host"],
-            port=redis_config["redis_port"],
-            decode_responses=True,
-        )
-        self.redis_client.execute_command("SELECT", redis_config["redis_chat_table"])
+        try:
+            self.redis_client = redis.Redis(
+                host=redis_config["redis_host"],
+                port=redis_config["redis_port"],
+                decode_responses=True,
+            )
+            self.redis_client.execute_command("SELECT", redis_config["redis_chat_table"])
+        except Exception as e:
+            LogUtils.log_error("Failed to connect to Redis: ", str(e))
 
     def add_chat_record(self, username, sessionid, msg_list):
         key = f"{username}:{sessionid}"

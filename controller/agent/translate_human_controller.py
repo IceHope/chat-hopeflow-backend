@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from langgraph.constants import END
 from langgraph.graph import StateGraph
 from starlette.websockets import WebSocket
-
+from langchain_core.language_models import BaseChatModel
 from models.factory.llm_factory import LLMFactory
 from models.model_type import LLMType
 from schema.agent_schema import TranslationAgentSchema
@@ -15,14 +15,17 @@ from utils.command_constants import CHAT_STREAM_SERVE_DONE
 
 translate_human_router = APIRouter()
 
-llm = LLMFactory.get_llm(LLMType.DEEPSEEK)
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
-os.environ["LANGCHAIN_PROJECT"] = "autogen" + datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+os.environ["LANGCHAIN_PROJECT"] = "agent-translate" + datetime.now().strftime(
+    "%d/%m/%Y %H:%M:%S"
+)
+
 
 def get_completion(
-        prompt: str,
-        system_message: str = "You are a helpful assistant.",
+    llm: BaseChatModel,
+    prompt: str,
+    system_message: str = "You are a helpful assistant.",
 ):
     messages = [
         ("system", system_message),
@@ -38,6 +41,7 @@ from typing import TypedDict, Optional
 
 
 class State(TypedDict):
+    llm: BaseChatModel
     web_socket: WebSocket
     human_flag: bool
     source_lang: str
@@ -61,6 +65,7 @@ workflow = StateGraph(State)
 
 
 async def initial_translation(state):
+    llm = state.get("llm")
     web_socket = state.get("web_socket")
     source_lang = state.get("source_lang")
     target_lang = state.get("target_lang")
@@ -74,7 +79,7 @@ Do not provide any explanations or text apart from the translation.
 
 {target_lang}:"""
 
-    completion = get_completion(prompt, system_message=system_message)
+    completion = get_completion(llm, prompt, system_message=system_message)
     print_msg = "\n## 直译结果: \n"
     print(print_msg)
     await web_socket.send_text(print_msg)
@@ -89,6 +94,7 @@ Do not provide any explanations or text apart from the translation.
 
 
 async def reflect_on_translation(state):
+    llm = state.get("llm")
     web_socket = state.get("web_socket")
     source_lang = state.get("source_lang")
     target_lang = state.get("target_lang")
@@ -128,7 +134,7 @@ Write a list of specific, helpful and constructive suggestions for improving the
 Each suggestion should address one specific part of the translation.
 Output only the suggestions and nothing else."""
 
-    completion = get_completion(prompt, system_message=system_message)
+    completion = get_completion(llm, prompt, system_message=system_message)
     print_msg = "\n## 审查意见: \n"
     print(print_msg)
     await web_socket.send_text(print_msg)
@@ -146,7 +152,9 @@ Output only the suggestions and nothing else."""
 async def human_feedback_translation(state):
     web_socket = state.get("web_socket")
     # 等待前端的反馈
-    await web_socket.send_text("\n #### 请确认审查意见是否满意Y，如果不满意请发送修改意见。")
+    await web_socket.send_text(
+        "\n #### 请确认审查意见是否满意Y，如果不满意请发送修改意见。"
+    )
     await web_socket.send_text(CHAT_STREAM_SERVE_DONE)
 
     human_feedback = await web_socket.receive_text()
@@ -159,6 +167,7 @@ async def human_feedback_translation(state):
 
 
 async def improve_translation(state):
+    llm = state.get("llm")
     web_socket = state.get("web_socket")
     source_lang = state.get("source_lang")
     target_lang = state.get("target_lang")
@@ -199,7 +208,7 @@ Please take into account the expert suggestions when editing the translation. Ed
 
 Output only the new translation and nothing else."""
 
-    completion = get_completion(prompt, system_message=system_message)
+    completion = get_completion(llm, prompt, system_message=system_message)
 
     print_msg = "\n## 最终结果: \n"
     print(print_msg)
@@ -238,7 +247,10 @@ def roter_translate(state):
 workflow.add_conditional_edges(
     "reflect_on_translation",
     roter_translate,
-    {"human_feedback_translation": "human_feedback_translation", "improve_translation": "improve_translation"}
+    {
+        "human_feedback_translation": "human_feedback_translation",
+        "improve_translation": "improve_translation",
+    },
 )
 
 workflow.add_edge("human_feedback_translation", "improve_translation")
@@ -288,19 +300,23 @@ async def websocket_endpoint(websocket: WebSocket):
         print("connection open")
         while True:
             try:
-                message = await websocket.receive_text()
-                print(f"Received message: {message}")
+                request_msg = await websocket.receive_text()
+                print(f"Received message: {request_msg}")
 
-                message_data = json.loads(message)
-                msg = TranslationAgentSchema(**message_data)
+                chat_request_data = TranslationAgentSchema(**json.loads(request_msg))
+                llm = LLMFactory.get_llm(
+                    mode_type=LLMType.get_enum_from_value(chat_request_data.model_type),
+                    mode_name=chat_request_data.model_name,
+                )
                 inputs = {
+                    "llm": llm,
                     "web_socket": websocket,
-                    "source_lang": msg.source_lang,
-                    "target_lang": msg.target_lang,
-                    "source_text": msg.data,
-                    "human_flag": msg.human_flag
+                    "source_lang": chat_request_data.source_lang,
+                    "target_lang": chat_request_data.target_lang,
+                    "source_text": chat_request_data.data,
+                    "human_flag": chat_request_data.human_flag,
                 }
-
+                print("inputs: ", inputs)
                 await app.ainvoke(input=inputs)
 
             except Exception as e:
@@ -312,3 +328,7 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         print("Closing connection")
         await websocket.close()
+
+
+if __name__ == "__main__":
+    print(app.get_graph().draw_mermaid())

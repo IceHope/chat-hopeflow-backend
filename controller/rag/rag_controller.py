@@ -68,7 +68,9 @@ def query_chunk_by_file_id(file: FileIdChunkRequest):
         filters=[ExactMatchFilter(key="file_id", value=file.file_id)]
     )
 
-    retrieve_nodes = rag_base_manager.retrieve_chunk(query=file.query, filters=filters)
+    retrieve_nodes, cost_time = rag_base_manager.retrieve_chunk(
+        query=file.query, filters=filters
+    )
 
     frontend_nodes = []
     for node in retrieve_nodes:
