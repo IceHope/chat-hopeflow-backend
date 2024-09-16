@@ -17,9 +17,7 @@ class HopeRetriever:
             vector_store=vector_store,
         )
         # similarity_top_k=6 是每个query最原始的返回个数
-        self.base_retriever = vector_store_index.as_retriever(
-            similarity_top_k=6
-        )
+        self.base_retriever = vector_store_index.as_retriever(similarity_top_k=6)
 
         self.fusion_retriever = QueryFusionRetriever(
             retrievers=[
@@ -33,10 +31,10 @@ class HopeRetriever:
         )
 
     def retrieve(
-            self,
-            query: str,
-            rag_config: RagFrontendConfig = None,
-            filters: MetadataFilters = None,
+        self,
+        query: str,
+        rag_config: RagFrontendConfig = None,
+        filters: MetadataFilters = None,
     ) -> List[NodeWithScore]:
         # filters = MetadataFilters(
         #     filters=[ExactMatchFilter(key="file_name", value="uber_2021.pdf")]

@@ -6,15 +6,15 @@ version = "0.1.1"
 uri = "http://localhost:19530"
 
 [rag.embedding.config]
-type = "zhipu"
-name = "embedding-3"
+type = "bge"
+name = "bge-large-zh-v1.5"
 
 [rag-rerank]
 type = "jina"
 name = "jina-reranker-v1-base-en"
 
 [rag.multi_modal]
-source = "gemini-1.5-flash"
+source = "gpt-4o"
 
 [rag.evaluation]
 retrieval = ["mrr", "hit_rate"]

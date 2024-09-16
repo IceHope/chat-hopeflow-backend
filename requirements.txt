@@ -41,6 +41,7 @@ llama-index-embeddings-ollama
 toml
 llama-index-callbacks-langfuse
 zhipuai
+neo4j
 
 
 
