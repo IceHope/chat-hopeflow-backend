@@ -1,6 +1,7 @@
 # chat-hopeflow-backend
 
 ChatHopeFlow 的后端工程 
+前端工程链接:[chat-hopeflow-frontend](https://github.com/IceHope/chat-hopeflow-frontend)
 
 # 安装
 
