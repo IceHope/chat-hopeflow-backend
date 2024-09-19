@@ -23,6 +23,5 @@ class BaseOpenaiTypeFactory(BaseLLMFactory, ABC):
         return ChatOpenAI(
             api_key=_config.api_key,
             base_url=_config.base_url,
-            temperature=0.7,
             model=self.get_default_mode_name() if mode_name is None else mode_name,
         )

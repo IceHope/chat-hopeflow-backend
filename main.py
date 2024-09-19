@@ -7,7 +7,9 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from controller.agent.agent_manager_controller import agent_manager_router
+from controller.agent.six_hat_controller import six_hat_router
 from controller.agent.story_line_controller import storyline_router
+from controller.agent.openai_o1_controller import openai_o1_router
 from controller.agent.translate_human_controller import translate_human_router
 from controller.chat_controller import chat_router
 from controller.config.config_controller import config_router
@@ -33,6 +35,8 @@ app.add_middleware(
 app.include_router(chat_router)
 app.include_router(translate_human_router)
 app.include_router(storyline_router)
+app.include_router(six_hat_router)
+app.include_router(openai_o1_router)
 app.include_router(file_router)
 app.include_router(user_router)
 app.include_router(rag_router)

@@ -6,8 +6,8 @@ version = "0.1.1"
 uri = "http://localhost:19530"
 
 [rag.embedding.config]
-type = "bge"
-name = "bge-large-zh-v1.5"
+type = "zhipu"
+name = "embedding-3"
 
 [rag-rerank]
 type = "jina"

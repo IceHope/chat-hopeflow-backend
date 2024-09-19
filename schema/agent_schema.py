@@ -23,11 +23,14 @@ class StoryLineAgentSchema(ChatRequestData):
 class AgentItemId(str, Enum):
     TRANSLATE = "agent_translate"
     STORY_LINE = "agent_storyline"
+    SIX_HAT = "agent_six_hat"
+    OPENAI_O1 = "agent_openai_o1"
 
 
 class AgentConfigSchema(BaseModel):
     item_id: str
     title: str
     desc: str
+    frame: str
     node_count: int
     flow_desc: str

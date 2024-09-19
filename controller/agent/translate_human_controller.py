@@ -23,9 +23,9 @@ os.environ["LANGCHAIN_PROJECT"] = "agent-translate" + datetime.now().strftime(
 
 
 def get_completion(
-    llm: BaseChatModel,
-    prompt: str,
-    system_message: str = "You are a helpful assistant.",
+        llm: BaseChatModel,
+        prompt: str,
+        system_message: str = "You are a helpful assistant.",
 ):
     messages = [
         ("system", system_message),
@@ -256,9 +256,6 @@ workflow.add_conditional_edges(
 workflow.add_edge("human_feedback_translation", "improve_translation")
 workflow.add_edge("improve_translation", END)
 
-# 开始执行
-app = workflow.compile()
-
 source_text = """
 Translation Agent: Agentic translation using reflection workflow
 This is a Python demonstration of a reflection agentic workflow for machine translation. The main steps are:
@@ -317,6 +314,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "human_flag": chat_request_data.human_flag,
                 }
                 print("inputs: ", inputs)
+                # 开始执行
+                app = workflow.compile()
                 await app.ainvoke(input=inputs)
 
             except Exception as e:
@@ -331,4 +330,5 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    print(app.get_graph().draw_mermaid())
+    # 开始执行
+    print(workflow.compile().get_graph().draw_mermaid())

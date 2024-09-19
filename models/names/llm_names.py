@@ -19,6 +19,8 @@ OPENAI_NAMES = [
     ("gpt-4o-mini", 0.15 * RATE, 0.6 * RATE),
     ("gpt-4o-mini-2024-07-18", 0.15 * RATE, 0.6 * RATE),
     ("gpt-3.5-turbo", 0.5 * RATE, 1.5 * RATE),
+    ("o1-preview", 15 * RATE, 60 * RATE),
+    ("o1-mini", 3 * RATE, 12 * RATE),
 ]
 
 
